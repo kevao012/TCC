@@ -54,7 +54,7 @@ int main() {
 		   3, 2, 1, 1, 0 };
   int** m = array_to_matrix(r,5,5);
 
-  /* initialize the gungarian_problem using the cost matrix*/
+  /* initialize the hungarian_problem using the cost matrix*/
   int matrix_size = hungarian_init(&p, m , 5,5, HUNGARIAN_MODE_MINIMIZE_COST) ;
 
   fprintf(stderr, "assignement matrix has a now a size %d rows and %d columns.\n\n",  matrix_size,matrix_size);

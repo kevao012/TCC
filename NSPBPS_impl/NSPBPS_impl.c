@@ -78,13 +78,20 @@ Como combinar cada Case com cada arquivo para gerar uma instancia?
 */
 ///////////////////////////////////
 
-struct Solucao{
-	int **solucao;
+enum TURNO { DIA, TARDE, NOITE, FOLGA };
+
+typedef struct {
+	enum TURNO **solucao;
 } estruturaSolucao;
 
+typedef struct {
+        enum TURNO *linha;
+} linhaMatriz;
+
+
 void moduloInput(char *arquivoEntrada, char *Case);
-estruturaSolucao* AvaliadorSolucoes();
-void GeracaoSaidaFormatada(estruturaSolucao *melhorSolucao,char *arquivoEntrada, char *Case);
+//estruturaSolucao* ILS();
+//void GeracaoSaidaFormatada(estruturaSolucao *melhorSolucao,char *arquivoEntrada, char *Case);
 
 /////////////////////////////////////////////////////////////////
 // Variaveis Globais
@@ -126,26 +133,27 @@ int *minMesmoTurnoTrabalhadoConsecutivos,	// minimo de turnos iguais consecutivo
 
 int main(int argc, char *argv[]){
 	
-	estruturaSolucao melhorSolucao;
+	estruturaSolucao *melhorSolucao;
 	
 	// Leitura de todos os dados e construcao de todas as estruturas usadas no problema
 	moduloInput(argv[1],argv[2]);
 
 	//
-	melhorSolucao = AvaliadorSolucoes();
+	//melhorSolucao = ILS();
 
 	// Geracao de arquivos ou saida formatada para analise de dados gerados
-	GeracaoSaidaFormatada(melhorSolucao,argv[1],argv[2]);
+	//GeracaoSaidaFormatada(melhorSolucao,argv[1],argv[2]);
 	return 0;
 }
 
-void moduloInput(char *arquivoEntrada, *Case){
+void moduloInput(char *arquivoEntrada, char *Case){
 	
 	int i,j,k;
 	FILE *arquivoInstancia,*arquivoRestricoes;
 
 	// Contrucao da instancia
 	///////////////////////////////////////////////////////////
+
 
 	arquivoInstancia  = fopen(arquivoEntrada,"r");
 	
@@ -167,11 +175,13 @@ void moduloInput(char *arquivoEntrada, *Case){
 		}
 	}
 
+	
+
 	// Construcao Matriz de Preferencia
-	**matrizPreferencia = (int ***)malloc(sizeof(int **) * Nurses);
+	matrizPreferencia = (int ***)malloc(sizeof(int **) * Nurses);
 
 	for( i = 0; i < Nurses ; i += 1){
-		*matrizPreferencia[i] = (int **)malloc(sizeof(int *) * Days);
+		matrizPreferencia[i] = (int **)malloc(sizeof(int *) * Days);
 		for( j = 0; j < Days; j += 1){
 			matrizPreferencia[i][j] = (int *)malloc(sizeof(int) * Shifts);
 		}
@@ -198,13 +208,13 @@ void moduloInput(char *arquivoEntrada, *Case){
 	// Leitura restricoes por enfermeira
 	fscanf(arquivoRestricoes,"%d %d",&Days,&Shifts);
 	fscanf(arquivoRestricoes,"%d %d",&minAtribuicoes,&maxAtribuicoes);
-	fscanf(arquicoRestricoes,"%d %d",&minTurnosTrabalhadosConsecutivos,&maxTurnosTrabalhadosConsecutivos);
+	fscanf(arquivoRestricoes,"%d %d",&minTurnosTrabalhadosConsecutivos,&maxTurnosTrabalhadosConsecutivos);
 
 	// Construcao das restricoes
 	minMesmoTurnoTrabalhadoConsecutivos = (int *)malloc(sizeof(int) * Shifts);
 	maxMesmoTurnoTrabalhadoConsecutivos = (int *)malloc(sizeof(int) * Shifts);
 	minNumeroAtribuicoesTurno 	    = (int *)malloc(sizeof(int) * Shifts);
-	minNumeroAtribuicoesTurno 	    = (int *)malloc(sizeof(int) * Shifts);
+	maxNumeroAtribuicoesTurno 	    = (int *)malloc(sizeof(int) * Shifts);
 
 	// Leitura das Restricoes por turno
 	for( k = 0; k < Shifts; k += 1){
@@ -218,9 +228,71 @@ void moduloInput(char *arquivoEntrada, *Case){
 	// Fim Construcao Restricoes
 	////////////////////////////////////////////////////////////
 
-}
 
-estruturaSolucao* AvaliadorSolucoes(){
+	///////////////////////////////////////////////////////////
+	// Printar todas as entradas para verificar se nao ocorreu erro de alocacao de memoria
+
+	//print do arquivo de instancia
+	
+	//print nome dos arquivos
+	printf("arquivo: %s\nCase: %s\n\n\n",arquivoEntrada,Case);
+
+	//print parametros da instancia
+	printf("Nurses: %d\nDays: %d\nShifts: %d\n\n\n",Nurses,Days,Shifts);
+
+
+	//print matriz de cobertura
+	printf("Matriz de cobertura\n\n");	
+	for(j = 0; j < Days; j += 1){
+		printf("Dia %d: \n\t",j+1);
+                for(k = 0; k < Shifts; k += 1){
+                        printf("Shift %d: %d ", k+1, matrizCobertura[j][k]);
+                }
+		printf("\n");
+        }
+	printf("\n\n\n");
+
+	//print matriz de preferencia
+	printf("Matriz de preferencia\n\n");
+	for(i = 0 ; i < Nurses ; i += 1){
+		printf("Nurse %d: \n", i+1);
+                for(j = 0; j < Days ; j += 1){
+			printf("\tDay %d: \n\t\t", j+1);
+                        for(k = 0; k < Shifts; k += 1){
+                                printf("Shift %d: %d ", k+1, matrizPreferencia[i][j][k]);
+                        }
+			printf("\n");
+                }
+        }
+	printf("\n\n\n");
+
+	//print do case
+
+	//parametros do case
+	printf("Dias: %d\nTurnos: %d\n", Days, Shifts);
+        printf("Minimo de atribuicoes: %d\nMaximo de atribuicoes: %d\n", minAtribuicoes, maxAtribuicoes);
+        printf("Minimo de turnos trabalhados consecutivos: %d\n", minTurnosTrabalhadosConsecutivos);
+	printf("Maximo de turnos trabalhados consecutivos: %d\n", maxTurnosTrabalhadosConsecutivos);
+	printf("\n\n\n");
+
+	printf("Mesmo Turno Trabalhado consecutivos\n\n");	
+	for( k = 0; k < Shifts; k += 1){
+		printf("Turno %d: min %d max %d\n",k+1,minMesmoTurnoTrabalhadoConsecutivos[k], maxMesmoTurnoTrabalhadoConsecutivos[k]);
+        }
+	printf("\n\n");
+
+	printf("Numero Atribuicoes por Turno\n\n");
+	for( k = 0; k < Shifts; k += 1){
+		printf("Turno %d: min %d max %d\n",k+1, minNumeroAtribuicoesTurno[k], maxNumeroAtribuicoesTurno[k]);
+        }
+	printf("\n\n");
+
+	// Fim print
+	/////////////////////////////////////////////////////////
+
+}
+/*
+estruturaSolucao* ILS(){
 
 	estruturaSolucao *solucaoInicial,
 			 *solucaoCorrente,
@@ -232,7 +304,7 @@ estruturaSolucao* AvaliadorSolucoes(){
 	solucaoInicial = GerarSolucaoInicial();
 	solucaoCorrente = VND(solucaoInicial);
 
-	for( i = 0; i < iteracoes ; i += 1 /*criterios de parada a serem definidos*/){
+	for( i = 0; i < iteracoes ; i += 1 ){
 		novaSolucao = Perturbacao(solucaoCorrente);
 		novaSolucaoCorrente = VND(novaSolucao);
 		solucaoCorrente = CriterioAceitacao(solucaoCorrente,novaSolucaoCorrente);
@@ -241,16 +313,76 @@ estruturaSolucao* AvaliadorSolucoes(){
 	return solucaoCorrente;	
 }
 
-estruturaSolucao* GerarSolucaoInicial(){
+linhaMatriz* constroiLinha(int day){
 
+	linhaMatriz *l = (linhaMatriz *)malloc(sizeof(linhaMatriz));
+	int N,quantidadeTurno,posicaoLinha = 0,i;
+	enum TURNO T = DIA;
+
+	l->linha = (TURNO *)calloc(Nurses,sizeof(TURNO));
+
+	for(N = 0; N < Nurses; N += 1){
+		quantidadeTurno = matrizCobertura[day][N];
+		for(i = 0; i < quantidadeTurno; i += 1){
+			l->linha[posicaoLinha] = T;
+			posicaoLinha += 1;
+		}
+		if(T == DIA){
+			T = TARDE;
+		}else if(T == TARDE){
+			T = NOITE;
+		}else if(T == NOITE){
+			T = FOLGA;
+		}
+	}
+
+	// caso todas as linhas nao tenham sido completadas
+	if(posicaoLinha < Nurses){
+		for(i = posicaoLinha ; i < Nurses ; i += 1){
+			l->linha[posicaoLinha] = T; // considerando que valor de T seja FOLGA
+		}
+	}
+
+	return l;	
+}
+
+estruturaSolucao* GerarSolucaoInicial(){
 	
+	estruturaSolucao *solucaoInicial;
+	linhaCobertura   *linhaMatriz;
+	int 		**matrizCusto,
+	int		**matrizAtribuicao,
+			day,
+			nurse,
+			i,j;
+	
+	inicializarSolucao(solucaoInicial);
+
+	for(day = 0; day < Days ; i += 1){
+		linhaMatriz = constroiLinha(day);
+		for(nurse = 0 ; nurse < Nurses ; nurse += 1){
+			matrizCusto = constroiMatrizCustoInicial(solucaoInicial,dia);
+			matrizAtribuicao = algoritmoHungaro(matrizCusto);// atribui turno a enfermeira, no dia d
+			
+			for( i = 0 ; i < Nurses ; i++){
+				for(j = 0; j < Nurses ; j+= 1){
+					if(matrizAtribuicao[i][j] == 1){// enfermeira i recebera turno j
+						break;
+					}
+				}
+				solucaoInicial[i][day] = linhaMatriz->linha[j];
+			}
+		}
+	}
+
+	return solucaoInicial;
+
 }
 
 // Dado matriz de ordem Nurses, retornar o resultado atrelando elemento
 // por elemento
-void BAP(int matrizPesos[Nurses][Nurses],int resultado[Nurses][2]){
+int** algoritmoHungaro(int **matrizPesos){
 	
-
 }
 
 estruturaSolucao* VND(estruturaSolucao *solucaoBruta){
@@ -277,9 +409,9 @@ void CRP(int **matrizSolucao){
 	int day;
 
 	for(day = 0; day < Days - 1; day += 1){
-		constroiMatrizBAP();
-		BAP();
-		RearranjoSolucao();;
+		constroiMatriz();
+		algoritmoHungaro();
+		RearranjoSolucao();
 	}
 }
 
@@ -287,7 +419,9 @@ void k_swap(int **matrizSolucao){
 	int day,
 	    k = rand()%Days;
 	
-	for(day = 0; day < Days - k - 1)
+	for(day = 0; day < Days - k - 1){
+
+	}
 
 }
 
@@ -296,6 +430,7 @@ estruturaSolucao* Perturbacao(estruturaSolucao *solucao){
 	estruturaSolucao *solucaoPerturbada = solucao;
 
 	int i, nivelPerturbacao = 5;
+	int perturbacao;
 
 	// Pensar em operacoes de perturbacao
 	// Trocar o turno de uma enfermeira em um dia
@@ -304,24 +439,22 @@ estruturaSolucao* Perturbacao(estruturaSolucao *solucao){
 	// ... pensar em mais, se houver
 
 	while( i = 0; i < nivelPerturbacao; i += 1){
-		//solucaoPerturbada = C(*solucaoPerturbada);
-		//solucaoPerturbada = k_swap(*solucaoPerturbada);
+		perturbacao = rand()%Nurses;
+
+		if(perturbacao == 0){
+			solucaoPerturbada = CRP(*solucaoPerturbada);
+		}else{
+			solucaoPerturbada = k_swap(*solucaoPerturbada, perturbacao);
+		}
 	}
 
 	return solucaoPerturbada;
 }
 
-estruturaSolucao* CRP(estruturaSolucao *solucao){
 
-}
-
-estruturaSolucao* VND(estruturaSolucao *solucao){
-
-	estruturaSolucao *solucaoOtimoLocal;
-
-	return NULL;
-}
-
+// Poderia ser alterado pela comparacao entre duas solucoes
+// pela diferenca entre a enfermeira menos beneficiada e a mais beneficiada
+// ao inves de simplesmente o menor custo possivel
 estruturaSolucao* CriterioAceitacao(estruturaSolucao *solucaoCorrente,estruturaSolucao *novaSolucao){
 
 	int rankSolucaoCorrente,
@@ -356,3 +489,4 @@ void GeracaoSaidaFormatada(estruturaSolucao *melhorSolucao, char *arquivoEntrada
 	
 
 }
+*/
