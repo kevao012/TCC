@@ -77,9 +77,6 @@ Como combinar cada Case com cada arquivo para gerar uma instancia?
 */
 ///////////////////////////////////
 
-#ifndef HUNGARIAN_H
-#define HUNGARIAN_H
-
 #define HUNGARIAN_NOT_ASSIGNED 0 
 #define HUNGARIAN_ASSIGNED 1
 
@@ -117,14 +114,16 @@ typedef struct {
 void moduloInput(char *arquivoEntrada, char *Case);
 void printaParametros(char *arquivoEntrada, char *Case);
 estruturaSolucao* ILS();
-void inicializarSolucao(estruturaSolucao *solucao)
+void inicializarSolucao(estruturaSolucao *solucao);
 estruturaSolucao* gerarSolucaoInicial();
 linhaMatriz* constroiLinha(int day);
 int** constroiMatrizCustoInicialDia(linhaMatriz *linha, estruturaSolucao* solucaoInicial, int dia);
-int calculoCustoRoteiro(int *roteiro, int dias);
+int calculoCustoRoteiro(enum TURNO *roteiro, int nurse, int dia);
 
 /*********************************/
 /// Hungarian algorithm functions
+
+int** hungarianAlgorithm(int** matrizCusto);
 
 /** This method initialize the hungarian_problem structure and init 
  *  the  cost matrices (missing lines or columns are filled with 0).
@@ -186,6 +185,9 @@ int *minMesmoTurnoTrabalhadoConsecutivos,	// minimo de turnos iguais consecutivo
     *maxNumeroAtribuicoesTurno;			// maximo de atribuicoes por turno
 
 // Parametros utilizados para os buscadores e ILS
+
+int violacaoRestricaoObrigatoria = 1000,
+    violacaoRestricaoDesejavel   =  100;
 
 enum BOOLEAN DEBUG = TRUE;
 
@@ -389,17 +391,17 @@ void inicializarSolucao(estruturaSolucao *solucao){
 estruturaSolucao* gerarSolucaoInicial(){
 	
 	estruturaSolucao *solucaoInicial;
-	linhaCobertura   *linhaMatriz;
+	linhaMatriz      *linhaCobertura;
 	int 		**matrizCusto,
-	int		**matrizAtribuicao,
+			**matrizAtribuicao,
 			day,nurse,i,j;
 	
 	inicializarSolucao(solucaoInicial);
 
 	for(day = 0; day < Days ; i += 1){
-		linhaMatriz = constroiLinha(day);// linha que representa as colunas de turnos
+		linhaCobertura = constroiLinha(day);// linha que representa as colunas de turnos
 		for(nurse = 0 ; nurse < Nurses ; nurse += 1){
-			matrizCusto = constroiMatrizCustoInicialDia(linhaMatriz, solucaoInicial, dia);// matriz nurses x nurses,
+			matrizCusto = constroiMatrizCustoInicialDia(linhaCobertura, solucaoInicial, day);// matriz nurses x nurses,
 			matrizAtribuicao = hungarianAlgorithm(matrizCusto);// atribui turno a enfermeira, no dia d
 			
 			for( i = 0 ; i < Nurses ; i++){
@@ -408,9 +410,13 @@ estruturaSolucao* gerarSolucaoInicial(){
 						break;
 					}
 				}
-				solucaoInicial[i][day] = linhaMatriz->linha[j];
+				solucaoInicial->solucao[i][day] = linhaCobertura->linha[j];
 			}
+			//free(matrizCusto);
+			//free(matrizAtribuicao);
 		}
+		//free(linhaMatriz->linha);
+		//free(linhaMatriz);
 	}
 
 	return solucaoInicial;
@@ -447,7 +453,16 @@ linhaMatriz* constroiLinha(int day){// constroi a linha que representa a coluna 
 		}
 	}
 
-	return l;	
+	if(DEBUG){
+		printf("Coluna da matriz de custo para o dia %d", day + 1);
+		for( i = 0 ; i < Nurses ; i +=1 ){
+			printf("%d ",l->linha[i]);
+		}
+		printf("\n\n");
+	}
+
+
+	return l;
 }
 
 
@@ -456,7 +471,7 @@ int** constroiMatrizCustoInicialDia(linhaMatriz *linha, estruturaSolucao* soluca
 	//utiliza matriz de preferencia
 	int **matrizCusto;
 	int i,j,k,custoRoteiro;
-	enum TURNO shitf;
+	enum TURNO shift;
 	enum TURNO *roteiro;
 
 	matrizCusto = malloc(Nurses*sizeof(int*));
@@ -468,22 +483,19 @@ int** constroiMatrizCustoInicialDia(linhaMatriz *linha, estruturaSolucao* soluca
 	roteiro = calloc(Days,sizeof(int));
 
 	for( i = 0 ; i < Nurses ; i += 1 ){
-		for( j = 0 ; j< Nurses ; j += 1 ){
-			shitf = linha->linha[j];
+		for( j = 0 ; j< Nurses ; j += 1 ){// mesmo iterando sobre a coluna de turnos, ha turnos adicionais,
+						  // portanto, deve ser igual o numero de enfermeiras
+			shift = linha->linha[j];
 
-			if( i != 0 ){
-				//solucaoInicial;
-				//memset();
-				
-				for( k = 0 ; k < dia ; k += 1){
-					roteiro[k] = solucaoInicial->solucao[i][k];
+			if( dia != 0 ){
+				for( k = 0 ; k <= dia ; k += 1){ // roteiro do primeiro ate o dia anterior ao atual
+					if( k == dia ) roteiro[k] = shift;
+					else           roteiro[k] = solucaoInicial->solucao[i][k];
 				}
-
-				matrizCusto[i][j] = calculoCustoRoteiro(roteiro,dia,shift);
+				matrizCusto[i][j] = calculoCustoRoteiro(roteiro,i,dia);
 			}else{
 				matrizCusto[i][j] = matrizPreferencia[i][dia][shift];
 			}
-
 		}
 	}
 
@@ -491,9 +503,105 @@ int** constroiMatrizCustoInicialDia(linhaMatriz *linha, estruturaSolucao* soluca
 
 }
 
-int calculoCustoRoteiro(int *roteiro, int dias, enum TURNO shift){
+// Tem como entrada o roteiro ate o dia atual, sendo o dia atual dado por dia e a enfermeira
+int calculoCustoRoteiro(enum TURNO *roteiro, int nurse, int dia){
 
+	int i, custoRoteiro = 0, custoPreferencia = 0;
+	enum TURNO shiftCorrente,
+		   shiftAnterior;
+
+	int quantidadeRestricoesObrigatoriasVioladas = 0,
+	    quantidadeRestricoesDesejaveisVioladas = 0;
+
+	int quantidadeAtribuicoes = 0,
+    	    quantidadeTurnosTrabalhadosConsecutivos = 0;
+
+	int quantidadeTurnosTrabalhadosConsecutivosCorrente = 0;
+
+	int *quantidadeMesmoTurnoTrabalhadoConsecutivos,
+    	    *quantidadeNumeroAtribuicoesTurno;	
+
+	int *quantidadeMesmoTurnoTrabalhadoConsecutivosCorrente;
+	
+	quantidadeMesmoTurnoTrabalhadoConsecutivos = calloc(Shifts,sizeof(int));
+	quantidadeNumeroAtribuicoesTurno = calloc(Shifts,sizeof(int));
+
+	quantidadeMesmoTurnoTrabalhadoConsecutivosCorrente = calloc(Shifts,sizeof(int));
+
+
+	// Acumulo dos dados para o calculo de custo do roteiro mais o dia atual
+	for( i = 0 ; i <= dia ; i += 1){
+		
+		shiftCorrente = roteiro[i];		
+
+		if(i != 0){ // verificar violacao de restricao obrigatoria
+			if((shiftAnterior == TARDE && shiftCorrente == DIA) ||
+			   (shiftAnterior == NOITE && (shiftCorrente == DIA || shiftCorrente == TARDE))){
+				quantidadeRestricoesObrigatoriasVioladas += 1;
+			}
+		}
+			
+		if(shiftCorrente != FOLGA){
+			quantidadeAtribuicoes += 1;
+		}
+
+		quantidadeNumeroAtribuicoesTurno[shiftCorrente] += 1;
+		
+		if( i != 0 && shiftCorrente == shiftAnterior ){
+			quantidadeTurnosTrabalhadosConsecutivosCorrente += 1;
+			quantidadeMesmoTurnoTrabalhadoConsecutivosCorrente[shiftCorrente] += 1;
+
+			if( quantidadeTurnosTrabalhadosConsecutivosCorrente > quantidadeTurnosTrabalhadosConsecutivos ){
+				quantidadeTurnosTrabalhadosConsecutivos = quantidadeTurnosTrabalhadosConsecutivosCorrente;
+			}
+
+			if( quantidadeMesmoTurnoTrabalhadoConsecutivosCorrente[shiftCorrente] > 
+				quantidadeMesmoTurnoTrabalhadoConsecutivos[shiftCorrente]){
+				quantidadeMesmoTurnoTrabalhadoConsecutivos[shiftCorrente] = 
+					quantidadeMesmoTurnoTrabalhadoConsecutivosCorrente[shiftCorrente];
+			}
+		}else{
+			quantidadeTurnosTrabalhadosConsecutivosCorrente = 1;
+			quantidadeMesmoTurnoTrabalhadoConsecutivosCorrente[shiftCorrente] = 1;
+		}
+
+		custoPreferencia += matrizPreferencia[nurse][i][shiftCorrente];
+
+		shiftAnterior = shiftCorrente;	
+	}
+	
+	// Calculo do custo baseado na matriz de preferencia e nos dados do roteiro
+	if(quantidadeAtribuicoes < minAtribuicoes || quantidadeAtribuicoes > maxAtribuicoes){
+		quantidadeRestricoesDesejaveisVioladas += 1;
+	}
+
+	if(quantidadeTurnosTrabalhadosConsecutivos < minTurnosTrabalhadosConsecutivos || 
+	   quantidadeTurnosTrabalhadosConsecutivos > maxTurnosTrabalhadosConsecutivos){
+		quantidadeRestricoesDesejaveisVioladas += 1;
+	}
+
+	for( i = 0 ; i < Shifts ; i += 1){
+		if( quantidadeMesmoTurnoTrabalhadoConsecutivos[i] < minMesmoTurnoTrabalhadoConsecutivos[i] ||
+		    quantidadeMesmoTurnoTrabalhadoConsecutivos[i] > maxMesmoTurnoTrabalhadoConsecutivos[i] ){
+			quantidadeRestricoesDesejaveisVioladas += 1;
+		}
+	}
+
+	for( i = 0 ; i < Shifts ; i += 1){
+		if( quantidadeNumeroAtribuicoesTurno[i] < minNumeroAtribuicoesTurno[i] ||
+		    quantidadeNumeroAtribuicoesTurno[i] > maxNumeroAtribuicoesTurno[i] ){
+			quantidadeRestricoesDesejaveisVioladas += 1;
+		}
+	}
+
+	return custoPreferencia + 
+	       quantidadeRestricoesObrigatoriasVioladas * violacaoRestricaoObrigatoria + 
+	       quantidadeRestricoesDesejaveisVioladas * violacaoRestricaoDesejavel;
 }
+
+
+
+/**********************Hungarian Algorithm*******************/
 
 int** hungarianAlgorithm(int** matrizCusto){
 
@@ -502,19 +610,15 @@ int** hungarianAlgorithm(int** matrizCusto){
 
 	hungarian_init(&p, matrizCusto , Nurses, Nurses, HUNGARIAN_MODE_MINIMIZE_COST);
 
+	if(DEBUG) hungarian_print_costmatrix(&p);
+
 	hungarian_solve(&p);
 
-	return p->assignment;
+	if(DEBUG) hungarian_print_assignment(&p);
+
+	return p.assignment;
 
 }
-
-
-
-
-/**********************Hungarian Algorithm*******************/
-
-
-
 
 
 void hungarian_print_matrix(int** C, int rows, int cols) {
