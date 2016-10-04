@@ -1,6 +1,9 @@
+CC = gcc
+
+CFLAGS = -O3 -Wall -I.
 
 run:
-	gcc NSPBPS_impl.c -o exec.out
+	$(CC) $(CFLAGS) NSPBPS_impl.c -o exec.out
 
 clean:
 	rm *~ *.out
