@@ -298,10 +298,18 @@ void moduloInput(char *arquivoEntrada, char *Case){
 
 	// Leitura das Restricoes por turno
 	for( k = 0; k < Shifts; k += 1){
-		fscanf(arquivoRestricoes,"%d",&minMesmoTurnoTrabalhadoConsecutivos[k]);
-		fscanf(arquivoRestricoes,"%d",&maxMesmoTurnoTrabalhadoConsecutivos[k]);
-		fscanf(arquivoRestricoes,"%d",&minNumeroAtribuicoesTurno[k]);
-		fscanf(arquivoRestricoes,"%d",&maxNumeroAtribuicoesTurno[k]);
+		if(fscanf(arquivoRestricoes,"%d",&minMesmoTurnoTrabalhadoConsecutivos[k]) == 1){
+			printf("Erro ao ler restricao de minMesmoTurnoTrabalhadoConsecutivos posicao: %d",k);
+		}
+		if(fscanf(arquivoRestricoes,"%d",&maxMesmoTurnoTrabalhadoConsecutivos[k]) == 1){
+			printf("Erro ao ler restricao de maxMesmoTurnoTrabalhadoConsecutivos posicao: %d",k);
+		}
+		if(fscanf(arquivoRestricoes,"%d",&minNumeroAtribuicoesTurno[k]) == 1){
+			printf("Erro ao ler restricao de minNumeroAtribuicoesTurno posicao: %d",k);
+		}
+		if(fscanf(arquivoRestricoes,"%d",&maxNumeroAtribuicoesTurno[k]) == 1){
+			printf("Erro ao ler restricao de maxNumeroAtribuicoesTurno posicao: %d",k);
+		}
 	}
 
 	fclose(arquivoRestricoes);
