@@ -120,6 +120,7 @@ estruturaSolucao* ILS();
 estruturaSolucao* inicializarSolucao();
 estruturaSolucao* gerarSolucaoInicial();
 estruturaSolucao* VND(estruturaSolucao *solucaoBruta);
+estruturaSolucao* Perturbacao(estruturaSolucao *solucao);
 estruturaSolucao* MelhorVizinhanca(estruturaSolucao *solucaoBruta, int estruturaEscolhida);
 void copiaSolucao(estruturaSolucao *solucao, estruturaSolucao *copia);
 void CRP(estruturaSolucao *solucao);
@@ -220,7 +221,9 @@ void moduloInput(char *arquivoEntrada, char *Case){
 	}
 
 	// Leitura parametros da instancia
-	fscanf(arquivoInstancia,"%d %d %d",&Nurses, &Days, &Shifts);
+	if(fscanf(arquivoInstancia,"%d %d %d",&Nurses, &Days, &Shifts) != 3){
+		printf("Erro ao ler parametros de instancia");
+	}
 	
 	// Construcao Matriz Cobertura
 	matrizCobertura = (int **)malloc(sizeof(int *) * Days);
@@ -233,7 +236,9 @@ void moduloInput(char *arquivoEntrada, char *Case){
 	// Leitura Matriz Cobertura
 	for(j = 0; j < Days; j += 1){
 		for(k = 0; k < Shifts; k += 1){
-			fscanf(arquivoInstancia,"%d",&matrizCobertura[j][k]);
+			if(fscanf(arquivoInstancia,"%d",&matrizCobertura[j][k]) != 1){
+				printf("Erro ao ler matriz cobertura posicao: %d,%d",j,k);
+			}
 		}
 	}
 
@@ -251,7 +256,9 @@ void moduloInput(char *arquivoEntrada, char *Case){
 	for(i = 0 ; i < Nurses ; i += 1){
 		for(j = 0; j < Days ; j += 1){
 			for(k = 0; k < Shifts; k += 1){
-				fscanf(arquivoInstancia,"%d",&matrizPreferencia[i][j][k]);
+				if(fscanf(arquivoInstancia,"%d",&matrizPreferencia[i][j][k]) != 1){
+					printf("Erro ao ler matriz de prefenrencia posicao: %d,%d,%d\n",i,j,k);
+				}
 			}
 		}
 	}
@@ -271,9 +278,17 @@ void moduloInput(char *arquivoEntrada, char *Case){
 	}
 
 	// Leitura restricoes por enfermeira
-	fscanf(arquivoRestricoes,"%d %d",&Days,&Shifts);
-	fscanf(arquivoRestricoes,"%d %d",&minAtribuicoes,&maxAtribuicoes);
-	fscanf(arquivoRestricoes,"%d %d",&minTurnosTrabalhadosConsecutivos,&maxTurnosTrabalhadosConsecutivos);
+	if( fscanf(arquivoRestricoes,"%d %d",&Days,&Shifts) != 2){
+		printf("Erro ao ler Days e Shifts\n");
+	}
+
+	if( fscanf(arquivoRestricoes,"%d %d",&minAtribuicoes,&maxAtribuicoes) != 2){
+		printf("Erro ao ler minAtribuicoes e maxAtribuicoes\n");
+	}
+
+	if( fscanf(arquivoRestricoes,"%d %d",&minTurnosTrabalhadosConsecutivos,&maxTurnosTrabalhadosConsecutivos) != 2){
+		printf("Erro ao ler minTurnosTrabalhadosConsecutivos e maxTurnosTrabalhadosConsecutivos\n");	
+	}
 
 	// Construcao das restricoes
 	minMesmoTurnoTrabalhadoConsecutivos = (int *)malloc(sizeof(int) * Shifts);
@@ -371,16 +386,16 @@ estruturaSolucao* ILS(){
 			 *novaSolucao,
 			 *novaSolucaoCorrente;
 
-	int i,iteracoes = 10000;
+	int i,iteracoes = 1500;
 
 	solucaoInicial = gerarSolucaoInicial();
 	solucaoCorrente = VND(solucaoInicial);
 
-	/*for( i = 0; i < iteracoes ; i += 1 ){
+	for( i = 0; i < iteracoes ; i += 1 ){
 		novaSolucao = Perturbacao(solucaoCorrente);
 		novaSolucaoCorrente = VND(novaSolucao);
 		solucaoCorrente = CriterioAceitacao(solucaoCorrente, novaSolucaoCorrente);
-	}*/
+	}
 
 	return solucaoCorrente;
 
@@ -478,26 +493,72 @@ estruturaSolucao* VND(estruturaSolucao *solucaoBruta){
 
 	copiaSolucao(solucaoBruta,melhorSolucao);
 
-	printf("melhorSolucao inicial: %d\n",calculoCustoTotal(melhorSolucao));
+	//printf("melhorSolucao inicial: %d\n",calculoCustoTotal(melhorSolucao));
 
 	while (estruturaVizinhancaCorrente <= quantidadeEstruturasVizinhanca){
 		novaSolucao = MelhorVizinhanca(melhorSolucao, estruturaVizinhancaCorrente);
 
-		printf("Valor novaSolucao: %d e melhorSolucao anterior: %d\n",calculoCustoTotal(novaSolucao),calculoCustoTotal(melhorSolucao));
+		//printf("Valor novaSolucao: %d e melhorSolucao anterior: %d\n",calculoCustoTotal(novaSolucao),calculoCustoTotal(melhorSolucao));
 
 		if(calculoCustoTotal(novaSolucao) < calculoCustoTotal(melhorSolucao)){
-			printf("%d menor que %d\n",calculoCustoTotal(novaSolucao),calculoCustoTotal(melhorSolucao));
+			//printf("%d menor que %d\n",calculoCustoTotal(novaSolucao),calculoCustoTotal(melhorSolucao));
 			copiaSolucao(novaSolucao,melhorSolucao);
 			estruturaVizinhancaCorrente = 1;
 		}else{
-			printf("Testando outra estrutura\n");
+			//printf("Testando outra estrutura\n");
 			estruturaVizinhancaCorrente += 1;
 		}
-		printf("Estrutura de vizinhanca %d\n",estruturaVizinhancaCorrente);
+		//printf("Estrutura de vizinhanca %d\n",estruturaVizinhancaCorrente);
 	}
 
 	return melhorSolucao;
 }
+
+
+// ideia: ajuste na criacao de otimo local com o VND
+// Exemplo: Verificar os roteiros com restricoes, e alterar por turnos para verificar se diminui custo
+estruturaSolucao* Perturbacao(estruturaSolucao *solucao){
+
+	estruturaSolucao *solucaoPerturbada = inicializarSolucao();
+	linhaMatriz      *linhaCobertura;
+	int day;
+	int i, j, nivelPerturbacao = 15;
+
+	copiaSolucao(solucao,solucaoPerturbada);
+
+	// Pensar em operacoes de perturbacao
+	// Trocar o turno de uma enfermeira em um dia
+	// Trocar o turno de duas enfermeiras no mesmo dia
+	// Trocar parte da escala entre duas enfermeiras
+	// Trocar um dia por outro
+	// ... pensar em mais, se houver
+	// CRP_Perturbado // mudanca nos turnos, respeitando a cobertura minima
+	// k_swap_Perturbado // mudanca nos turnos, respeitando a cobertura minima
+
+	for( i = 0; i < nivelPerturbacao; i += 1){
+		day = rand() % Days;
+		linhaCobertura = constroiLinha(day);
+
+		for( j = 0 ; j < Nurses ; j += 1){
+			solucaoPerturbada->solucao[j][day] = linhaCobertura->linha[j];
+		}
+		
+		CRP(solucaoPerturbada);
+		for( j = 1 ; j <= Days - 1; j += 1 ){
+			if( j == 1 ){
+				CRP(solucaoPerturbada);
+			}else{
+				k_swap(solucaoPerturbada,j);
+			}
+		}
+	}
+
+	//free(linhaCobertura->linha);
+	//free(linhaCobertura);
+
+	return solucaoPerturbada;
+}
+
 
 estruturaSolucao* MelhorVizinhanca(estruturaSolucao *solucaoBruta, int estruturaEscolhida){
 
@@ -506,7 +567,7 @@ estruturaSolucao* MelhorVizinhanca(estruturaSolucao *solucaoBruta, int estrutura
 	copiaSolucao(solucaoBruta, melhorVizinhanca);
 
 	if(estruturaEscolhida == 1){
-		printf("Executa CRP, estrutura %d\n",estruturaEscolhida);
+		//printf("Executa CRP, estrutura %d\n",estruturaEscolhida);
 		CRP(melhorVizinhanca);
 	}else if(estruturaEscolhida == 2){
 
@@ -514,15 +575,15 @@ estruturaSolucao* MelhorVizinhanca(estruturaSolucao *solucaoBruta, int estrutura
 		int i;
 
 
-		for( i = 1 ; i < Days - 1; i += 1 ){//tamanho do bloco k
+		for( i = 1 ; i <= Days - 1; i += 1 ){//tamanho do bloco k
 
 			copiaSolucao(solucaoBruta, novaSolucao);
 
 			if( i == 1 ){
-				printf("Executa CRP, estrutura %d\n",estruturaEscolhida);
+				//printf("Executa CRP, estrutura %d\n",estruturaEscolhida);
 				CRP(novaSolucao);
 			}else{
-				printf("Executa k_swap, estrutura %d\n",estruturaEscolhida);
+				//printf("Executa k_swap, estrutura %d\n",estruturaEscolhida);
 				k_swap(novaSolucao,i);
 			}
 			if( calculoCustoTotal(novaSolucao) < calculoCustoTotal(melhorVizinhanca) ){
@@ -565,7 +626,7 @@ void CRP(estruturaSolucao *solucao){
 			// printf("Valores i = %d day = %d j = %d linhaCobertura->linha[j] = %d\n",i,day,j,linhaCobertura->linha[j]);
 			// solucaoInicial->solucao[i][day] = linhaCobertura->linha[j];
 			// printf("atribui turno para enfermeira %d no dia %d\n\n",i,day);
-			for( k = day + 1 ; day < Days ; day += 1 ){
+			for( k = day + 1 ; k < Days ; k += 1 ){
 				solucao->solucao[i][k] = solucaoCopia->solucao[j][k];
 			}
 		}
@@ -606,7 +667,7 @@ void k_swap(estruturaSolucao *solucao, int k_s){
 			// printf("Valores i = %d day = %d j = %d linhaCobertura->linha[j] = %d\n",i,day,j,linhaCobertura->linha[j]);
 			// solucaoInicial->solucao[i][day] = linhaCobertura->linha[j];
 			// printf("atribui turno para enfermeira %d no dia %d\n\n",i,day);
-			for( k = day + 1 ; day < Days - k_s; day += 1 ){
+			for( k = day + 1 ; k < day + k_s; k += 1 ){
 				solucao->solucao[i][k] = solucaoCopia->solucao[j][k];
 			}
 		}
@@ -1405,40 +1466,3 @@ int main(int argc, char *argv[]){
 	return 0;
 }
 
-
-// ideia: ajuste na criacao de otimo local com o VND
-// Exemplo: Verificar os roteiros com restricoes, e alterar por turnos para verificar se diminui custo
-/*
-
-estruturaSolucao* Perturbacao(estruturaSolucao *solucao){
-
-	estruturaSolucao *solucaoPerturbada = solucao;
-
-	int i, nivelPerturbacao = 5;
-	int perturbacao;
-
-	// Pensar em operacoes de perturbacao
-	// Trocar o turno de uma enfermeira em um dia
-	// Trocar o turno de duas enfermeiras no mesmo dia
-	// Trocar parte da escala entre duas enfermeiras
-	// ... pensar em mais, se houver
-	CRP_Perturbado // mudanca nos turnos, respeitando a cobertura minima
-	k_swap_Perturbado // mudanca nos turnos, respeitando a cobertura minima
-
-	while( i = 0; i < nivelPerturbacao; i += 1){
-		perturbacao = rand()%Nurses;
-
-		if(perturbacao == 0){
-			solucaoPerturbada = CRP(*solucaoPerturbada);
-		}else{
-			solucaoPerturbada = k_swap(*solucaoPerturbada, perturbacao);
-		}
-	}
-
-	return solucaoPerturbada;
-}
-
-
-
-
-*/
