@@ -116,6 +116,7 @@ typedef struct {
 
 void moduloInput(char *arquivoEntrada, char *Case);
 void printaParametros(char *arquivoEntrada, char *Case);
+void liberarMemoriaSolucao(estruturaSolucao* solucao);
 estruturaSolucao* ILS();
 estruturaSolucao* inicializarSolucao();
 estruturaSolucao* gerarSolucaoInicial();
@@ -298,16 +299,16 @@ void moduloInput(char *arquivoEntrada, char *Case){
 
 	// Leitura das Restricoes por turno
 	for( k = 0; k < Shifts; k += 1){
-		if(fscanf(arquivoRestricoes,"%d",&minMesmoTurnoTrabalhadoConsecutivos[k]) == 1){
+		if(fscanf(arquivoRestricoes,"%d",&minMesmoTurnoTrabalhadoConsecutivos[k]) != 1){
 			printf("Erro ao ler restricao de minMesmoTurnoTrabalhadoConsecutivos posicao: %d",k);
 		}
-		if(fscanf(arquivoRestricoes,"%d",&maxMesmoTurnoTrabalhadoConsecutivos[k]) == 1){
+		if(fscanf(arquivoRestricoes,"%d",&maxMesmoTurnoTrabalhadoConsecutivos[k]) != 1){
 			printf("Erro ao ler restricao de maxMesmoTurnoTrabalhadoConsecutivos posicao: %d",k);
 		}
-		if(fscanf(arquivoRestricoes,"%d",&minNumeroAtribuicoesTurno[k]) == 1){
+		if(fscanf(arquivoRestricoes,"%d",&minNumeroAtribuicoesTurno[k]) != 1){
 			printf("Erro ao ler restricao de minNumeroAtribuicoesTurno posicao: %d",k);
 		}
-		if(fscanf(arquivoRestricoes,"%d",&maxNumeroAtribuicoesTurno[k]) == 1){
+		if(fscanf(arquivoRestricoes,"%d",&maxNumeroAtribuicoesTurno[k]) != 1){
 			printf("Erro ao ler restricao de maxNumeroAtribuicoesTurno posicao: %d",k);
 		}
 	}
@@ -387,6 +388,17 @@ void printaParametros(char *arquivoEntrada, char *Case){
 
 }
 
+void liberarMemoriaSolucao(estruturaSolucao* solucao){
+	
+	int i;
+	for( i = 0 ; i < Nurses ; i += 1){
+		//printf("Limpando %d\n",i);
+		free(solucao->solucao[i]);
+	}
+	free(solucao->solucao);
+	free(solucao);
+}
+
 estruturaSolucao* ILS(){
 
 	estruturaSolucao *solucaoInicial,
@@ -394,16 +406,21 @@ estruturaSolucao* ILS(){
 			 *novaSolucao,
 			 *novaSolucaoCorrente;
 
-	int i,iteracoes = 1500;
+	int i,iteracoes = 700;
 
 	solucaoInicial = gerarSolucaoInicial();
 	solucaoCorrente = VND(solucaoInicial);
 
 	for( i = 0; i < iteracoes ; i += 1 ){
+		printf("iteracao %d de %d\n",i+1,iteracoes);
 		novaSolucao = Perturbacao(solucaoCorrente);
 		novaSolucaoCorrente = VND(novaSolucao);
 		solucaoCorrente = CriterioAceitacao(solucaoCorrente, novaSolucaoCorrente);
 	}
+
+	liberarMemoriaSolucao(novaSolucao);
+	liberarMemoriaSolucao(novaSolucaoCorrente);
+	liberarMemoriaSolucao(solucaoInicial);
 
 	return solucaoCorrente;
 
@@ -465,16 +482,16 @@ estruturaSolucao* gerarSolucaoInicial(){
 		for( i = 0 ; i < Nurses ; i+= 1){
 			free(matrizCusto[i]);
 		}
-		/*if(DEBUG) printf("Dando free em gerarSolucaoInicial.matrizCusto\n\n");
+		if(DEBUG) printf("Dando free em gerarSolucaoInicial.matrizCusto\n\n");
 		free(matrizCusto);
 		if(DEBUG) printf("Dando free em cada linha de gerarSolucaoInicial.matrizAtribuicao\n\n");
 		for( i = 0 ; i < Nurses ; i+= 1){
 			free(matrizAtribuicao[i]);
 		}
-		if(DEBUG) printf("Dando free em gerarSolucaoInicial.matrizAtribuicao\n\n");
+		//if(DEBUG) printf("Dando free em gerarSolucaoInicial.matrizAtribuicao\n\n");
 		free(matrizAtribuicao);
-		free(linhaCobertura->linha);*/
-		//free(linhaCobertura);
+		free(linhaCobertura->linha);
+		free(linhaCobertura);
 	}
 
 	return solucaoInicial;
@@ -517,6 +534,7 @@ estruturaSolucao* VND(estruturaSolucao *solucaoBruta){
 			estruturaVizinhancaCorrente += 1;
 		}
 		//printf("Estrutura de vizinhanca %d\n",estruturaVizinhancaCorrente);
+		liberarMemoriaSolucao(novaSolucao);
 	}
 
 	return melhorSolucao;
@@ -530,7 +548,10 @@ estruturaSolucao* Perturbacao(estruturaSolucao *solucao){
 	estruturaSolucao *solucaoPerturbada = inicializarSolucao();
 	linhaMatriz      *linhaCobertura;
 	int day;
-	int i, j, nivelPerturbacao = 15;
+	int i, j;
+
+	//int nivelPerturbacao = 3*Days; // Tomado de forma empirica
+	int nivelPerturbacao = (Days/2) % rand() + 1;
 
 	copiaSolucao(solucao,solucaoPerturbada);
 
@@ -551,18 +572,17 @@ estruturaSolucao* Perturbacao(estruturaSolucao *solucao){
 			solucaoPerturbada->solucao[j][day] = linhaCobertura->linha[j];
 		}
 		
-		CRP(solucaoPerturbada);
+		/*CRP(solucaoPerturbada);
 		for( j = 1 ; j <= Days - 1; j += 1 ){
 			if( j == 1 ){
 				CRP(solucaoPerturbada);
 			}else{
 				k_swap(solucaoPerturbada,j);
 			}
-		}
+		}*/
+		free(linhaCobertura->linha);
+		free(linhaCobertura);
 	}
-
-	//free(linhaCobertura->linha);
-	//free(linhaCobertura);
 
 	return solucaoPerturbada;
 }
@@ -642,7 +662,13 @@ void CRP(estruturaSolucao *solucao){
 		for( i = 0 ; i < Nurses ; i+= 1){
 			free(matrizCusto[i]);
 		}
+		free(matrizCusto);
+		for( i = 0 ; i < Nurses ; i+= 1){
+			free(matrizAtribuicao[i]);
+		}
+		free(matrizAtribuicao);
 	}
+	liberarMemoriaSolucao(solucaoCopia);
 }
 
 void k_swap(estruturaSolucao *solucao, int k_s){
@@ -683,7 +709,13 @@ void k_swap(estruturaSolucao *solucao, int k_s){
 		for( i = 0 ; i < Nurses ; i+= 1){
 			free(matrizCusto[i]);
 		}
+		free(matrizCusto);
+		for( i = 0 ; i < Nurses ; i+= 1){
+			free(matrizAtribuicao[i]);
+		}
+		free(matrizAtribuicao);
 	}
+	liberarMemoriaSolucao(solucaoCopia);
 }
 
 linhaMatriz* constroiLinha(int day){// constroi a linha que representa a coluna da matriz de custo
@@ -743,7 +775,8 @@ int** constroiMatrizCustoInicialDia(linhaMatriz *linha, estruturaSolucao* soluca
 	int **matrizCusto;
 	int i,j,k;
 	enum TURNO shift;
-	enum TURNO *roteiro;
+	//enum TURNO *roteiro;
+	enum TURNO roteiro[dia+1];
 
 	if(DEBUG) printf("Alocando constroiMatrizCustoInicialDia.matrizCusto\n\n");
 	matrizCusto = (int **)malloc(Nurses*sizeof(int*));
@@ -753,8 +786,8 @@ int** constroiMatrizCustoInicialDia(linhaMatriz *linha, estruturaSolucao* soluca
 		matrizCusto[i] = (int *)malloc(Nurses*sizeof(int));
 	}
 
-	if(DEBUG) printf("Alocando constroiMatrizCustoInicialDia.roteiro\n\n");
-	roteiro = (enum TURNO*)calloc(dia+1,sizeof(enum TURNO));
+	//if(DEBUG) printf("Alocando constroiMatrizCustoInicialDia.roteiro\n\n");
+	//roteiro = (enum TURNO*)calloc(dia+1,sizeof(enum TURNO));
 
 	for( i = 0 ; i < Nurses ; i += 1 ){
 		for( j = 0 ; j< Nurses ; j += 1 ){// mesmo iterando sobre a coluna de turnos, ha turnos adicionais,
@@ -775,6 +808,8 @@ int** constroiMatrizCustoInicialDia(linhaMatriz *linha, estruturaSolucao* soluca
 			}
 		}
 	}
+
+	//free(roteiro);
  
 	return matrizCusto;
 
@@ -811,6 +846,8 @@ int** constroiMatrizCustoQuebraUmDia(estruturaSolucao* solucao, int diaDeQuebra)
 		}
 	}
 
+	free(roteiro);
+
 	return matrizCusto;
 }
 
@@ -845,6 +882,8 @@ int** constroiMatrizCustoQuebraDoisDias(estruturaSolucao* solucao, int diaDeQueb
 		}
 	}
 
+	free(roteiro);
+
 	return matrizCusto;
 }
 
@@ -877,12 +916,12 @@ int calculoCustoRoteiro(enum TURNO *roteiro, int nurse, int dia){
 		
 		shiftCorrente = roteiro[i];
 
-		if(i != 0){ // verificar violacao de restricao obrigatoria
+		/*if(i != 0){ // verificar violacao de restricao obrigatoria
 			if((shiftAnterior == TARDE && shiftCorrente == DIA) ||
 			   (shiftAnterior == NOITE && (shiftCorrente == DIA || shiftCorrente == TARDE))){
 				quantidadeRestricoesObrigatoriasVioladas += 1;
 			}
-		}
+		}*/
 			
 		if(shiftCorrente != FOLGA){
 			quantidadeAtribuicoes += 1;
@@ -974,7 +1013,6 @@ int calculoCustoTotal(estruturaSolucao *solucao){
 
 	return custoTotal;
 }
-
 
 
 
