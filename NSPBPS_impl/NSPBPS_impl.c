@@ -97,10 +97,12 @@ enum BOOLEAN { FALSE, TRUE };
 
 typedef struct {
 	enum TURNO **solucao;
+	//enum TURNO solucao[100][28];
 } estruturaSolucao;
 
 typedef struct {
-        enum TURNO *linha;
+        //enum TURNO *linha;
+	enum TURNO linha[100];
 } linhaMatriz;
 
 /***** Hungarian Struct ********/
@@ -126,8 +128,8 @@ estruturaSolucao* MelhorVizinhanca(estruturaSolucao *solucaoBruta, int estrutura
 void copiaSolucao(estruturaSolucao *solucao, estruturaSolucao *copia);
 void CRP(estruturaSolucao *solucao);
 void k_swap(estruturaSolucao *solucao, int k_s);
-linhaMatriz* constroiLinha(int day);
-int** constroiMatrizCustoInicialDia(linhaMatriz *linha, estruturaSolucao* solucaoInicial, int dia);
+linhaMatriz constroiLinha(int day);
+int** constroiMatrizCustoInicialDia(linhaMatriz linha, estruturaSolucao* solucaoInicial, int dia);
 int** constroiMatrizCustoQuebraUmDia(estruturaSolucao* solucao, int diaDeQuebra);
 int** constroiMatrizCustoQuebraDoisDias(estruturaSolucao* solucao, int diaDeQuebra1, int diaDeQuebra2);
 int calculoCustoRoteiro(enum TURNO *roteiro, int nurse, int dia);
@@ -406,7 +408,7 @@ estruturaSolucao* ILS(){
 			 *novaSolucao,
 			 *novaSolucaoCorrente;
 
-	int i,iteracoes = 700;
+	int i,iteracoes = 3000;
 
 	solucaoInicial = gerarSolucaoInicial();
 	solucaoCorrente = VND(solucaoInicial);
@@ -418,8 +420,11 @@ estruturaSolucao* ILS(){
 		solucaoCorrente = CriterioAceitacao(solucaoCorrente, novaSolucaoCorrente);
 	}
 
-	liberarMemoriaSolucao(novaSolucao);
-	liberarMemoriaSolucao(novaSolucaoCorrente);
+	//printf("libera novaSolucao\n");
+	//liberarMemoriaSolucao(novaSolucao);
+	//printf("libera novaSolucaoC\n");
+	//liberarMemoriaSolucao(novaSolucaoCorrente);
+	//printf("libera novaInicial\n");
 	liberarMemoriaSolucao(solucaoInicial);
 
 	return solucaoCorrente;
@@ -452,7 +457,7 @@ estruturaSolucao* inicializarSolucao(){
 estruturaSolucao* gerarSolucaoInicial(){
 	
 	estruturaSolucao *solucaoInicial;
-	linhaMatriz      *linhaCobertura;
+	linhaMatriz      linhaCobertura;
 	int 		**matrizCusto,
 			**matrizAtribuicao,
 			day,i,j;
@@ -474,7 +479,7 @@ estruturaSolucao* gerarSolucaoInicial(){
 				}
 			}
 			//printf("Valores i = %d day = %d j = %d linhaCobertura->linha[j] = %d\n",i,day,j,linhaCobertura->linha[j]);
-			solucaoInicial->solucao[i][day] = linhaCobertura->linha[j];
+			solucaoInicial->solucao[i][day] = linhaCobertura.linha[j];
 			//printf("atribui turno para enfermeira %d no dia %d\n\n",i,day);
 		}
 
@@ -490,8 +495,8 @@ estruturaSolucao* gerarSolucaoInicial(){
 		}
 		//if(DEBUG) printf("Dando free em gerarSolucaoInicial.matrizAtribuicao\n\n");
 		free(matrizAtribuicao);
-		free(linhaCobertura->linha);
-		free(linhaCobertura);
+		//free(linhaCobertura->linha);
+		//free(linhaCobertura);
 	}
 
 	return solucaoInicial;
@@ -546,7 +551,7 @@ estruturaSolucao* VND(estruturaSolucao *solucaoBruta){
 estruturaSolucao* Perturbacao(estruturaSolucao *solucao){
 
 	estruturaSolucao *solucaoPerturbada = inicializarSolucao();
-	linhaMatriz      *linhaCobertura;
+	linhaMatriz      linhaCobertura;
 	int day;
 	int i, j;
 
@@ -569,7 +574,7 @@ estruturaSolucao* Perturbacao(estruturaSolucao *solucao){
 		linhaCobertura = constroiLinha(day);
 
 		for( j = 0 ; j < Nurses ; j += 1){
-			solucaoPerturbada->solucao[j][day] = linhaCobertura->linha[j];
+			solucaoPerturbada->solucao[j][day] = linhaCobertura.linha[j];
 		}
 		
 		/*CRP(solucaoPerturbada);
@@ -580,8 +585,8 @@ estruturaSolucao* Perturbacao(estruturaSolucao *solucao){
 				k_swap(solucaoPerturbada,j);
 			}
 		}*/
-		free(linhaCobertura->linha);
-		free(linhaCobertura);
+		//free(linhaCobertura->linha);
+		//free(linhaCobertura);
 	}
 
 	return solucaoPerturbada;
@@ -718,19 +723,20 @@ void k_swap(estruturaSolucao *solucao, int k_s){
 	liberarMemoriaSolucao(solucaoCopia);
 }
 
-linhaMatriz* constroiLinha(int day){// constroi a linha que representa a coluna da matriz de custo
+linhaMatriz constroiLinha(int day){// constroi a linha que representa a coluna da matriz de custo
 
-	linhaMatriz *l = (linhaMatriz *)malloc(sizeof(linhaMatriz));
+	//linhaMatriz *l = (linhaMatriz *)malloc(sizeof(linhaMatriz));
+	linhaMatriz l;
 	int S,quantidadeTurno,posicaoLinha = 0,i,randomico;
 	enum TURNO T = DIA;
 	time_t t;
 
-	l->linha = (enum TURNO*)calloc(Nurses,sizeof(enum TURNO));
+	//l->linha = (enum TURNO*)calloc(Nurses,sizeof(enum TURNO));
 
 	for(S = 0; S < Shifts; S += 1){
 		quantidadeTurno = matrizCobertura[day][S];
 		for(i = 0; i < quantidadeTurno; i += 1){
-			l->linha[posicaoLinha] = T;
+			l.linha[posicaoLinha] = T;
 			posicaoLinha += 1;
 		}
 		if(T == DIA){
@@ -753,14 +759,14 @@ linhaMatriz* constroiLinha(int day){// constroi a linha que representa a coluna 
 			if( randomico == 2 ) T = NOITE;
 			if( randomico == 3 ) T = FOLGA;
 
-			l->linha[i] = T; // considerando que valor de T seja FOLGA, talvez escolher estes valores aleatoriamente
+			l.linha[i] = T; // considerando que valor de T seja FOLGA, talvez escolher estes valores aleatoriamente
 		}
 	}
 
 	if(DEBUG){
 		printf("Coluna da matriz de custo para o dia %d\n\n", day + 1);
 		for( i = 0 ; i < Nurses ; i +=1 ){
-			printf("%d ",l->linha[i]);
+			printf("%d ",l.linha[i]);
 		}
 		printf("\n\n");
 	}
@@ -769,7 +775,7 @@ linhaMatriz* constroiLinha(int day){// constroi a linha que representa a coluna 
 	return l;
 }
 
-int** constroiMatrizCustoInicialDia(linhaMatriz *linha, estruturaSolucao* solucaoInicial, int dia){
+int** constroiMatrizCustoInicialDia(linhaMatriz linha, estruturaSolucao* solucaoInicial, int dia){
 
 	//utiliza matriz de preferencia
 	int **matrizCusto;
@@ -792,7 +798,7 @@ int** constroiMatrizCustoInicialDia(linhaMatriz *linha, estruturaSolucao* soluca
 	for( i = 0 ; i < Nurses ; i += 1 ){
 		for( j = 0 ; j< Nurses ; j += 1 ){// mesmo iterando sobre a coluna de turnos, ha turnos adicionais,
 						  // portanto, deve ser igual o numero de enfermeiras
-			shift = linha->linha[j];
+			shift = linha.linha[j];
 
 			if( dia != 0 ){
 				
@@ -855,7 +861,7 @@ int** constroiMatrizCustoQuebraDoisDias(estruturaSolucao* solucao, int diaDeQueb
 	
 	int i,j,k;
 	int **matrizCusto;
-	enum TURNO *roteiro;
+	enum TURNO roteiro[Days];
 
 	if(DEBUG) printf("Alocando constroiMatrizCustoQuebraDoisDias.matrizCusto\n\n");
 	matrizCusto = (int **)malloc(Nurses*sizeof(int*));
@@ -865,8 +871,8 @@ int** constroiMatrizCustoQuebraDoisDias(estruturaSolucao* solucao, int diaDeQueb
 		matrizCusto[i] = (int *)malloc(Nurses*sizeof(int));
 	}
 
-	if(DEBUG) printf("Alocando constroiMatrizCustoInicialDia.roteiro\n\n");
-	roteiro = (enum TURNO*)calloc(Days,sizeof(enum TURNO));
+	//if(DEBUG) printf("Alocando constroiMatrizCustoInicialDia.roteiro\n\n");
+	//roteiro = (enum TURNO*)calloc(Days,sizeof(enum TURNO));
 
 	for( i = 0 ; i < Nurses ; i += 1 ){
 		for ( j = 0 ; j < Nurses ; j += 1 ){
@@ -882,7 +888,7 @@ int** constroiMatrizCustoQuebraDoisDias(estruturaSolucao* solucao, int diaDeQueb
 		}
 	}
 
-	free(roteiro);
+	//free(roteiro);
 
 	return matrizCusto;
 }
@@ -995,9 +1001,11 @@ estruturaSolucao* CriterioAceitacao(estruturaSolucao *solucaoCorrente,estruturaS
 	rankNovaSolucao     = calculoCustoTotal(novaSolucao);
 
 	if( rankSolucaoCorrente <= rankNovaSolucao ){
+		liberarMemoriaSolucao(novaSolucao);
 		return solucaoCorrente;
 	}
 
+	liberarMemoriaSolucao(solucaoCorrente);
 	return novaSolucao;
 
 }
@@ -1406,7 +1414,7 @@ void hungarian_solve(hungarian_problem_t* p)
     fprintf(stderr, "Cost is %d\n",cost);
 
 
-  //free(slack);
+  free(slack);
   free(col_inc);
   free(parent_row);
   free(row_mate);
