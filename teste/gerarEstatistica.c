@@ -74,7 +74,7 @@ int main(int args, char *argv[]){
 
 	f = fopen(arquivoGerar,"w");
 
-	fprintf(f,"%.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f\n",(somaCalculoCusto * 1.0) / quantInstancias,
+	fprintf(f,"%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",(somaCalculoCusto * 1.0) / quantInstancias,
 		(somaCalculoCustoSemPenalidades * 1.0) / quantInstancias,
 		(sSomaPenalidades * 1.0) / quantInstancias,
                 (sSomaQuantPenalidades * 1.0) / quantInstancias,
